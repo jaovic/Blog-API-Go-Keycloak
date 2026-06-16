@@ -73,6 +73,46 @@ func RequireRole(role string) func(http.Handler) http.Handler {
 	}
 }
 
+// RequireAnyRole blocks requests where the user doesn't have at least one of the given roles.
+func RequireAnyRole(roles ...string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			claims, ok := GetClaims(r)
+			if !ok {
+				jsonError(w, "forbidden", http.StatusForbidden)
+				return
+			}
+			for _, role := range roles {
+				if claims.HasRole(role) {
+					next.ServeHTTP(w, r)
+					return
+				}
+			}
+			jsonError(w, "forbidden", http.StatusForbidden)
+		})
+	}
+}
+
+// OptionalMiddleware validates the Bearer token if present, but lets
+// the request through even without one (claims will simply be absent).
+func OptionalMiddleware(verifier *oidc.IDTokenVerifier) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			raw := extractToken(r)
+			if raw != "" {
+				if idToken, err := verifier.Verify(r.Context(), raw); err == nil {
+					var claims Claims
+					if idToken.Claims(&claims) == nil {
+						ctx := context.WithValue(r.Context(), ClaimsKey, &claims)
+						r = r.WithContext(ctx)
+					}
+				}
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
 // GetClaims extracts claims from context (use inside handlers).
 func GetClaims(r *http.Request) (*Claims, bool) {
 	claims, ok := r.Context().Value(ClaimsKey).(*Claims)

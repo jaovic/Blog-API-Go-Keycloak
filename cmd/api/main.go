@@ -56,13 +56,14 @@ func main() {
 	})
 
 	authMiddleware := auth.Middleware(verifier)
+	optionalAuth := auth.OptionalMiddleware(verifier)
 
 	r.Get("/me", func(w http.ResponseWriter, req *http.Request) {
 		authMiddleware(http.HandlerFunc(meHandler)).ServeHTTP(w, req)
 	})
 
 	r.Route("/posts", func(r chi.Router) {
-		r.Mount("/", postsHandler.Routes(authMiddleware))
+		r.Mount("/", postsHandler.Routes(authMiddleware, optionalAuth))
 	})
 
 	// users: registo público + administração protegida

@@ -19,22 +19,24 @@ func NewHandler(db *sql.DB) *Handler {
 	return &Handler{db: db}
 }
 
-func (h *Handler) Routes(protected func(http.Handler) http.Handler) chi.Router {
+func (h *Handler) Routes(protected func(http.Handler) http.Handler, optionalAuth func(http.Handler) http.Handler) chi.Router {
 	r := chi.NewRouter()
 
 	// public
 	r.Get("/", h.list)
-	r.Get("/{id}", h.get)
+	r.With(optionalAuth).Get("/{id}", h.get)
 
 	// protected (require valid JWT)
 	r.Group(func(r chi.Router) {
 		r.Use(protected)
 		r.Post("/", h.create)
+		r.Get("/mine", h.listMine)
 		r.Put("/{id}", h.update)
 		r.Delete("/{id}", h.delete)
 		r.Post("/{id}/submit", h.submit)
-		r.With(auth.RequireRole("editor")).Post("/{id}/approve", h.approve)
-		r.With(auth.RequireRole("editor")).Post("/{id}/reject", h.reject)
+		r.With(auth.RequireAnyRole("editor", "admin")).Get("/pending", h.listPending)
+		r.With(auth.RequireAnyRole("editor", "admin")).Post("/{id}/approve", h.approve)
+		r.With(auth.RequireAnyRole("editor", "admin")).Post("/{id}/reject", h.reject)
 	})
 
 	return r
@@ -44,6 +46,56 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	rows, err := h.db.QueryContext(r.Context(),
 		`SELECT id, title, content, author_id, status, created_at, updated_at
 		 FROM posts WHERE status = 'published' ORDER BY created_at DESC`)
+	if err != nil {
+		jsonError(w, "database error", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var result []Post
+	for rows.Next() {
+		var p Post
+		if err := rows.Scan(&p.ID, &p.Title, &p.Content, &p.AuthorID, &p.Status, &p.CreatedAt, &p.UpdatedAt); err != nil {
+			continue
+		}
+		result = append(result, p)
+	}
+	if result == nil {
+		result = []Post{}
+	}
+	writeJSON(w, result)
+}
+
+func (h *Handler) listMine(w http.ResponseWriter, r *http.Request) {
+	claims, _ := auth.GetClaims(r)
+
+	rows, err := h.db.QueryContext(r.Context(),
+		`SELECT id, title, content, author_id, status, created_at, updated_at
+		 FROM posts WHERE author_id = $1 ORDER BY created_at DESC`, claims.Sub)
+	if err != nil {
+		jsonError(w, "database error", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var result []Post
+	for rows.Next() {
+		var p Post
+		if err := rows.Scan(&p.ID, &p.Title, &p.Content, &p.AuthorID, &p.Status, &p.CreatedAt, &p.UpdatedAt); err != nil {
+			continue
+		}
+		result = append(result, p)
+	}
+	if result == nil {
+		result = []Post{}
+	}
+	writeJSON(w, result)
+}
+
+func (h *Handler) listPending(w http.ResponseWriter, r *http.Request) {
+	rows, err := h.db.QueryContext(r.Context(),
+		`SELECT id, title, content, author_id, status, created_at, updated_at
+		 FROM posts WHERE status = 'pending_review' ORDER BY updated_at ASC`)
 	if err != nil {
 		jsonError(w, "database error", http.StatusInternalServerError)
 		return
