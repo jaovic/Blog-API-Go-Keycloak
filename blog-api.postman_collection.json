@@ -10,14 +10,15 @@
     { "key": "client_id",      "value": "blog-api" },
     { "key": "client_secret",  "value": "TmVsWCBWGS5VcEn9qgqFJPPyotb9Rvag" },
     { "key": "access_token",   "value": "" },
-    { "key": "post_id",        "value": "1" }
+    { "key": "post_id",        "value": "1" },
+    { "key": "user_id",        "value": "" }
   ],
   "item": [
     {
       "name": "Auth",
       "item": [
         {
-          "name": "Get Token (author)",
+          "name": "Get Token (author - joao)",
           "event": [
             {
               "listen": "test",
@@ -26,7 +27,7 @@
                   "var json = pm.response.json();",
                   "if (json.access_token) {",
                   "    pm.collectionVariables.set('access_token', json.access_token);",
-                  "    console.log('Token saved!');",
+                  "    console.log('Token saved! (joao/author)');",
                   "}"
                 ]
               }
@@ -43,7 +44,71 @@
                 { "key": "client_id",     "value": "{{client_id}}" },
                 { "key": "client_secret", "value": "{{client_secret}}" },
                 { "key": "username",      "value": "joao" },
-                { "key": "password",      "value": "SUA_SENHA_AQUI" }
+                { "key": "password",      "value": "admin" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Token (editor - maria)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.access_token) {",
+                  "    pm.collectionVariables.set('access_token', json.access_token);",
+                  "    console.log('Token saved! (maria/editor)');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{keycloak_url}}/realms/{{realm}}/protocol/openid-connect/token",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "grant_type",    "value": "password" },
+                { "key": "client_id",     "value": "{{client_id}}" },
+                { "key": "client_secret", "value": "{{client_secret}}" },
+                { "key": "username",      "value": "maria" },
+                { "key": "password",      "value": "maria123" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Token (admin - joao)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.access_token) {",
+                  "    pm.collectionVariables.set('access_token', json.access_token);",
+                  "    console.log('Token saved! (admin)');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{keycloak_url}}/realms/{{realm}}/protocol/openid-connect/token",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "grant_type",    "value": "password" },
+                { "key": "client_id",     "value": "{{client_id}}" },
+                { "key": "client_secret", "value": "{{client_secret}}" },
+                { "key": "username",      "value": "joao" },
+                { "key": "password",      "value": "admin" }
               ]
             }
           }
@@ -54,7 +119,7 @@
       "name": "Health",
       "item": [
         {
-          "name": "Health Check",
+          "name": "GET /health",
           "request": {
             "method": "GET",
             "url": "{{base_url}}/health"
@@ -70,6 +135,84 @@
           "request": {
             "method": "GET",
             "url": "{{base_url}}/me",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "POST /users/register (público)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.id) {",
+                  "    pm.collectionVariables.set('user_id', json.id);",
+                  "    console.log('user_id saved: ' + json.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/users/register",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"pedro\",\n  \"email\": \"pedro@blog.com\",\n  \"firstName\": \"Pedro\",\n  \"lastName\": \"Silva\",\n  \"password\": \"pedro123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "GET /users (admin)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/users",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ]
+          }
+        },
+        {
+          "name": "GET /users/:id (admin)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/users/{{user_id}}",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ]
+          }
+        },
+        {
+          "name": "PATCH /users/:id/roles (admin)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/users/{{user_id}}/roles",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roles\": [\"editor\"]\n}"
+            }
+          }
+        },
+        {
+          "name": "DELETE /users/:id (admin)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/users/{{user_id}}",
             "header": [
               { "key": "Authorization", "value": "Bearer {{access_token}}" }
             ]
