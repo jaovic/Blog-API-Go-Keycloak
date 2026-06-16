@@ -16,6 +16,7 @@ import (
 
 	"github.com/joao.martins/blog/internal/auth"
 	"github.com/joao.martins/blog/internal/posts"
+	"github.com/joao.martins/blog/internal/users"
 )
 
 func main() {
@@ -29,6 +30,14 @@ func main() {
 	verifier := setupOIDC()
 
 	postsHandler := posts.NewHandler(db)
+
+	kcClient := users.NewKeycloakClient(
+		os.Getenv("KEYCLOAK_URL"),
+		os.Getenv("KEYCLOAK_REALM"),
+		os.Getenv("KEYCLOAK_CLIENT_ID"),
+		os.Getenv("KEYCLOAK_CLIENT_SECRET"),
+	)
+	usersHandler := users.NewHandler(kcClient)
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
@@ -48,6 +57,9 @@ func main() {
 	r.Route("/posts", func(r chi.Router) {
 		r.Mount("/", postsHandler.Routes(authMiddleware))
 	})
+
+	// users: registo público + administração protegida
+	r.Mount("/users", usersHandler.Routes(authMiddleware))
 
 	port := os.Getenv("PORT")
 	if port == "" {
