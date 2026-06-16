@@ -1,0 +1,184 @@
+{
+  "info": {
+    "name": "Blog API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url",       "value": "http://localhost:3000" },
+    { "key": "keycloak_url",   "value": "http://localhost:8080" },
+    { "key": "realm",          "value": "blog-platform" },
+    { "key": "client_id",      "value": "blog-api" },
+    { "key": "client_secret",  "value": "TmVsWCBWGS5VcEn9qgqFJPPyotb9Rvag" },
+    { "key": "access_token",   "value": "" },
+    { "key": "post_id",        "value": "1" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Get Token (author)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.access_token) {",
+                  "    pm.collectionVariables.set('access_token', json.access_token);",
+                  "    console.log('Token saved!');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{keycloak_url}}/realms/{{realm}}/protocol/openid-connect/token",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "grant_type",    "value": "password" },
+                { "key": "client_id",     "value": "{{client_id}}" },
+                { "key": "client_secret", "value": "{{client_secret}}" },
+                { "key": "username",      "value": "joao" },
+                { "key": "password",      "value": "SUA_SENHA_AQUI" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Me",
+      "item": [
+        {
+          "name": "GET /me",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/me",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Posts",
+      "item": [
+        {
+          "name": "GET /posts (público)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/posts"
+          }
+        },
+        {
+          "name": "GET /posts/:id (público)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/posts/{{post_id}}"
+          }
+        },
+        {
+          "name": "POST /posts (criar rascunho)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.id) {",
+                  "    pm.collectionVariables.set('post_id', json.id);",
+                  "    console.log('post_id saved: ' + json.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/posts",
+            "header": [
+              { "key": "Authorization",  "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type",   "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Meu primeiro post\",\n  \"content\": \"Conteúdo do post aqui.\"\n}"
+            }
+          }
+        },
+        {
+          "name": "PUT /posts/:id (editar)",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/posts/{{post_id}}",
+            "header": [
+              { "key": "Authorization",  "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type",   "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Título atualizado\",\n  \"content\": \"Conteúdo atualizado.\"\n}"
+            }
+          }
+        },
+        {
+          "name": "POST /posts/:id/submit (enviar para revisão)",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/posts/{{post_id}}/submit",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ]
+          }
+        },
+        {
+          "name": "POST /posts/:id/approve (aprovar) [editor]",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/posts/{{post_id}}/approve",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ]
+          }
+        },
+        {
+          "name": "POST /posts/:id/reject (rejeitar) [editor]",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/posts/{{post_id}}/reject",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ]
+          }
+        },
+        {
+          "name": "DELETE /posts/:id",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/posts/{{post_id}}",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
