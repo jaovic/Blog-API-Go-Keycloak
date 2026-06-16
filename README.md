@@ -135,6 +135,22 @@ make run
 
 A API estará disponível em `http://localhost:3000`.
 
+### 7. Popular com dados de exemplo (opcional)
+
+```bash
+make seed
+```
+
+O script vai pedir o email e password de um utilizador com roles `author` + `editor` (ou `admin`) e criar:
+
+| Status | Quantidade | Exemplos |
+|---|---|---|
+| ✅ Publicado | 5 | Go, Keycloak, PostgreSQL vs MongoDB, Docker Compose, Next.js |
+| 🟡 Em revisão | 3 | TailwindCSS, JWT vs Sessions, Monorepo |
+| 📝 Rascunho | 3 | Microserviços, Observabilidade, Git Flow |
+
+> Requer `jq` instalado — `brew install jq`
+
 ## Testar com Postman
 
 Importa o ficheiro `blog-api.postman_collection.json` no Postman.
@@ -162,7 +178,8 @@ A collection inclui:
 ├── migrations/
 │   └── 001_create_posts.sql
 ├── scripts/
-│   └── init-db.sql              # cria schema do Keycloak no Postgres
+│   ├── init-db.sql              # cria schema do Keycloak no Postgres
+│   └── seed.sh                  # popula a BD com posts de exemplo
 ├── docker-compose.yml
 ├── Makefile
 └── .env.example
@@ -176,5 +193,6 @@ make build        # compila o binário
 make docker-up    # sobe Keycloak + PostgreSQL
 make docker-down  # para os containers
 make migrate      # executa as migrations
+make seed         # popula com posts de exemplo
 make tidy         # go mod tidy
 ```

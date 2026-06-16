@@ -13,5 +13,8 @@ docker-down:
 migrate:
 	docker compose exec postgres psql -U blog -d blog -f /dev/stdin < migrations/001_create_posts.sql
 
+seed:
+	@./scripts/seed.sh
+
 tidy:
 	go mod tidy
