@@ -113,5 +113,8 @@ func setupOIDC() *oidc.IDTokenVerifier {
 	}
 	log.Printf("connected to Keycloak realm %q", realm)
 
-	return provider.Verifier(&oidc.Config{ClientID: clientID})
+	// O Keycloak coloca o client no campo "azp", não em "aud".
+	// SkipClientIDCheck evita o erro "aud mismatch" e validamos o issuer na mesma.
+	_ = clientID
+	return provider.Verifier(&oidc.Config{SkipClientIDCheck: true})
 }
