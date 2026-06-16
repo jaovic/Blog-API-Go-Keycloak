@@ -152,6 +152,15 @@ func (kc *KeycloakClient) GetUsers() ([]User, error) {
 	if err := json.NewDecoder(resp.Body).Decode(&users); err != nil {
 		return nil, err
 	}
+
+	// enriquecer cada utilizador com as suas roles
+	for i := range users {
+		roles, err := kc.GetUserRoles(users[i].ID)
+		if err == nil {
+			users[i].Roles = roles
+		}
+	}
+
 	return users, nil
 }
 

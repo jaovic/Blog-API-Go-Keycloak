@@ -11,6 +11,7 @@ import (
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 
@@ -40,6 +41,12 @@ func main() {
 	usersHandler := users.NewHandler(kcClient)
 
 	r := chi.NewRouter()
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:3001"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
+		AllowCredentials: true,
+	}))
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
@@ -49,13 +56,14 @@ func main() {
 	})
 
 	authMiddleware := auth.Middleware(verifier)
+	optionalAuth := auth.OptionalMiddleware(verifier)
 
 	r.Get("/me", func(w http.ResponseWriter, req *http.Request) {
 		authMiddleware(http.HandlerFunc(meHandler)).ServeHTTP(w, req)
 	})
 
 	r.Route("/posts", func(r chi.Router) {
-		r.Mount("/", postsHandler.Routes(authMiddleware))
+		r.Mount("/", postsHandler.Routes(authMiddleware, optionalAuth))
 	})
 
 	// users: registo público + administração protegida
